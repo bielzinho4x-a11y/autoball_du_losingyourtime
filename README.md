@@ -1,1 +1,147 @@
-# autoball_du_losingyourtime
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+-- Estado do Auto Follow
+local autoFollow = false
+local targetBall = nil
+local char, humanoid, hrp
+
+local function updateChar()
+    char = Player.Character
+    if char then 
+        humanoid = char:FindFirstChildOfClass("Humanoid")
+        hrp = char:FindFirstChild("HumanoidRootPart")
+    end
+end
+
+Player.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    updateChar()
+end)
+updateChar()
+
+-- Buscar Bola Mais Próxima
+local function findClosestBall()
+    if not hrp or not hrp.Parent then return nil end
+    local closest = nil
+    local closeDist = math.huge
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name == "TPS" then
+            local d = (v.Position - hrp.Position).Magnitude
+            if d < closeDist then 
+                closeDist = d
+                closest = v 
+            end
+        end
+    end
+    return closest
+end
+
+-- Criar Botão Flutuante (Fundo Preto + Letra Bastão)
+local floatGui = Instance.new("ScreenGui")
+floatGui.Name = "ThHubAutoFollowOnly"
+floatGui.ResetOnSpawn = false
+pcall(function() floatGui.Parent = Player:WaitForChild("PlayerGui") end)
+
+local floatBtn = Instance.new("TextButton")
+floatBtn.Name = "AutoFollowFloatBtn"
+floatBtn.Size = UDim2.new(0, 150, 0, 42)
+floatBtn.Position = UDim2.new(0.85, 0, 0.2, 0)
+floatBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Fundo Preto
+floatBtn.Text = "SEGUIR BOLA: DESLIGADO"
+floatBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
+floatBtn.TextScaled = true
+floatBtn.Font = Enum.Font.GothamBold -- Letra Bastão
+floatBtn.Parent = floatGui
+
+local floatCorner = Instance.new("UICorner")
+floatCorner.CornerRadius = UDim.new(0, 8)
+floatCorner.Parent = floatBtn
+
+local floatStroke = Instance.new("UIStroke")
+floatStroke.Color = Color3.fromRGB(255, 50, 50)
+floatStroke.Thickness = 1.5
+floatStroke.Parent = floatBtn
+
+-- Sistema para Arrastar o Botão na Tela
+local draggingFloat = false
+local dragInputFloat, dragStartFloat, startPosFloat
+
+floatBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingFloat = true
+        dragStartFloat = input.Position
+        startPosFloat = floatBtn.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingFloat = false
+            end
+        end)
+    end
+end)
+
+floatBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInputFloat = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInputFloat and draggingFloat then
+        local delta = input.Position - dragStartFloat
+        floatBtn.Position = UDim2.new(startPosFloat.X.Scale, startPosFloat.X.Offset + delta.X, startPosFloat.Y.Scale, startPosFloat.Y.Offset + delta.Y)
+    end
+end)
+
+-- Atualizar Visual do Botão
+local function updateBtnVisual()
+    if autoFollow then
+        floatBtn.Text = "SEGUIR BOLA: LIGADO"
+        floatBtn.TextColor3 = Color3.fromRGB(50, 255, 50)
+        floatStroke.Color = Color3.fromRGB(50, 255, 50)
+    else
+        floatBtn.Text = "SEGUIR BOLA: DESLIGADO"
+        floatBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
+        floatStroke.Color = Color3.fromRGB(255, 50, 50)
+    end
+end
+
+local function toggleAutoFollow()
+    autoFollow = not autoFollow
+    if autoFollow then
+        targetBall = findClosestBall()
+    else
+        targetBall = nil
+    end
+    updateBtnVisual()
+end
+
+floatBtn.MouseButton1Click:Connect(toggleAutoFollow)
+
+-- Atalho no Teclado (Tecla 'U')
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.U then
+        toggleAutoFollow()
+    end
+end)
+
+-- Loop de Movimentação
+RunService.RenderStepped:Connect(function()
+    if autoFollow then
+        if not humanoid or not hrp then updateChar() end
+        if not humanoid or not hrp then return end
+        
+        if not targetBall or not targetBall.Parent then 
+            targetBall = findClosestBall() 
+        end
+        
+        if targetBall and targetBall.Parent then 
+            humanoid:MoveTo(targetBall.Position) 
+        end
+    end
+end)
