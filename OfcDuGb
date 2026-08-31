@@ -122,10 +122,10 @@ end
 
 floatBtn.MouseButton1Click:Connect(toggleAutoFollow)
 
--- Atalho no Teclado (Tecla '\')
+-- Atalho no Teclado (Tecla 'U')
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode == Enum.KeyCode.\ then
+    if input.KeyCode == Enum.KeyCode.U then
         toggleAutoFollow()
     end
 end)
