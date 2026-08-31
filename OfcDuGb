@@ -125,7 +125,7 @@ floatBtn.MouseButton1Click:Connect(toggleAutoFollow)
 -- Atalho no Teclado (Tecla 'Q')
 UserInputService.InputBegan:Connect(function(input, gpe)
     if gpe then return end
-    if input.KeyCode == Enum.KeyCode.Q then
+    if input.KeyCode == Enum.KeyCode.MouseWheel then
         toggleAutoFollow()
     end
 end)
